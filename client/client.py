@@ -5,6 +5,7 @@ from lowdown import *
 from widgets import *
 from re import sub
 
+
 class AddroomFrame(MyFrame):
     def show_frame(self):
         self.checkbuttons.clear()
@@ -34,7 +35,9 @@ class AddroomFrame(MyFrame):
 
         self.room_name.grid(row=0, column=3)
         self.enter_room_name.grid(row=1, column=3)
-        self.submit.grid(row=2, column=3)
+        self.label_type.grid(row=2, column=3)
+        self.enter_type.grid(row=3, column=3)
+        self.submit.grid(row=4, column=3)
 
     def add_room(self, event):
         create_room(self, self.master.info_frame, sock, server_addr, username)
@@ -78,18 +81,21 @@ class AddroomFrame(MyFrame):
 
         self.users = list()
 
-        self.up = MyButton(self, text='выше', width=2)
+        self.up = MyButton(self, text='up', width=2)
         self.up.bind('<Button-1>', self.scroll_up)
 
-        self.down = MyButton(self, text='ниже', width=2)
+        self.down = MyButton(self, text='down', width=2)
         self.down.bind('<Button-1>', self.scroll_down)
 
-        self.users_label = MyLabel(self, text='выберите пользователей:')
+        self.users_label = MyLabel(self, text='выберите собеседников:')
 
-        self.room_name = MyLabel(self, text='введите имя комнаты:')
+        self.room_name = MyLabel(self, text='введите название:')
         self.enter_room_name = MyEntry(self)
 
-        self.submit = MyButton(self, text='создать')
+        self.label_type = MyLabel(self, text='введите тип шлюза:')
+        self.enter_type = MyEntry(self)
+
+        self.submit = MyButton(self, text='подтвердить')
         self.submit.bind('<Button-1>', self.add_room)
 
 
@@ -101,7 +107,7 @@ class DelroomFrame(MyFrame):
         super(DelroomFrame, self).__init__()
         global username, sock, server_addr
 
-        self.label = MyLabel(self, text='введите имя комнаты:')
+        self.label = MyLabel(self, text='введите название шлюза:')
         self.label.pack()
 
         self.entry = MyEntry(self)
@@ -112,7 +118,56 @@ class DelroomFrame(MyFrame):
         self.submit.bind('<Button-1>', self.del_room)
 
 
+class ChangestatusFrame(MyFrame):
+    def ch_status(self, event):
+        change_status(self,
+                      self.master.info_frame, sock, server_addr, username)
 
+    def __init__(self, *args, **kwargs):
+        super(ChangestatusFrame, self).__init__()
+        global username, sock, server_addr
+
+        self.label_username = MyLabel(self, text='введите логин:')
+        self.label_username.pack()
+
+        self.entry_username = MyEntry(self)
+        self.entry_username.pack()
+
+        self.label_status = MyLabel(self, text='выберите статус:')
+        self.label_status.pack()
+
+        self.var = StringVar()
+        self.var.set(None)
+        self.statuses = {status: MyRadiobutton(self, text=status,
+                                               variable=self.var, value=status, main_color=main_color,
+                                               sand_color=sand_color, bd=bd)
+                         for status in ['plebeian', 'vassal', 'emperor']}
+
+        for status in self.statuses:
+            self.statuses[status].pack()
+
+        self.submit = MyButton(self, text='ТАК ТОЧНО!')
+        self.submit.pack()
+        self.submit.bind('<Button-1>', self.ch_status)
+
+
+class DeluserFrame(MyFrame):
+    def del_user(self, event):
+        delete_user(self, self.master.info_frame, sock, server_addr, username)
+
+    def __init__(self, *args, **kwargs):
+        super(DeluserFrame, self).__init__()
+        global username, sock, server_addr
+
+        self.label = MyLabel(self, text='Удалить пользователя:')
+        self.label.pack()
+
+        self.entry = MyEntry(self)
+        self.entry.pack()
+
+        self.submit = MyButton(self, text='Прощай')
+        self.submit.pack()
+        self.submit.bind('<Button-1>', self.del_user)
 
 
 class ThemesFrame(MyFrame):
@@ -131,12 +186,13 @@ class ThemesFrame(MyFrame):
         try:
             self.master.send_message_frame.place_forget()
             self.master.delroom_frame.place_forget()
-
+            self.master.changestatus_frame.place_forget()
+            self.master.deluser_frame.place_forget()
             self.master.addroom_frame.place_forget()
             self.master.chat_frames[self.master.rooms_frame.selected_room].place_forget()
         except KeyError:
             pass
-        self.master.themes_frame.place(x=650, y=0)
+        self.master.themes_frame.place(x=465, y=150)
 
     def create_radiobuttons(self):
         for theme in self.themes:
@@ -170,13 +226,13 @@ class ThemesFrame(MyFrame):
         super(ThemesFrame, self).__init__()
         global username, sock, server_addr
 
-        self.label = MyLabel(self, text='выберите тему:')
+        self.label = MyLabel(self, text='выберите подходящую тему:')
         self.label.pack()
 
         self.themes = dict()
         self.list_themes = list()
 
-        self.submit = MyButton(self, text='подтвердить')
+        self.submit = MyButton(self, text='подтвердите')
         self.submit.bind('<Button-1>', self.save)
 
 
@@ -185,28 +241,50 @@ class MenuFrame(MyFrame):
         try:
             self.master.send_message_frame.place_forget()
             self.master.delroom_frame.place_forget()
-            
+            self.master.changestatus_frame.place_forget()
+            self.master.deluser_frame.place_forget()
             self.master.themes_frame.place_forget()
             self.master.chat_frames[self.master.rooms_frame.selected_room].place_forget()
         except KeyError:
             pass
-        self.master.addroom_frame.place(x=220, y=60)
+        self.master.addroom_frame.place(x=300, y=200)
         add_users(sock, username, self.master)
 
     def show_delroom_frame(self, event):
         try:
             self.master.send_message_frame.place_forget()
             self.master.addroom_frame.place_forget()
-            
+            self.master.changestatus_frame.place_forget()
+            self.master.deluser_frame.place_forget()
             self.master.themes_frame.place_forget()
             self.master.chat_frames[self.master.rooms_frame.selected_room].place_forget()
         except KeyError:
             pass
-        self.master.delroom_frame.place(x=225, y=0)
+        self.master.delroom_frame.place(x=425, y=180)
 
-    
+    def show_changestatus_frame(self, event):
+        try:
+            self.master.send_message_frame.place_forget()
+            self.master.addroom_frame.place_forget()
+            self.master.delroom_frame.place_forget()
+            self.master.deluser_frame.place_forget()
+            self.master.themes_frame.place_forget()
+            self.master.chat_frames[self.master.rooms_frame.selected_room].place_forget()
+        except KeyError:
+            pass
+        self.master.changestatus_frame.place(x=425, y=180)
 
-   
+    def show_deluser_frame(self, event):
+        try:
+            self.master.send_message_frame.place_forget()
+            self.master.addroom_frame.place_forget()
+            self.master.delroom_frame.place_forget()
+            self.master.changestatus_frame.place_forget()
+            self.master.themes_frame.place_forget()
+            self.master.chat_frames[self.master.rooms_frame.selected_room].place_forget()
+        except KeyError:
+            pass
+        self.master.deluser_frame.place(x=425, y=180)
 
     def disconnect(self, event):
         global sock, username, server_addr
@@ -214,6 +292,8 @@ class MenuFrame(MyFrame):
             self.master.send_message_frame.place_forget()
             self.master.addroom_frame.place_forget()
             self.master.delroom_frame.place_forget()
+            self.master.changestatus_frame.place_forget()
+            self.master.deluser_frame.place_forget()
             self.master.rooms_frame.place_forget()
             self.master.rooms_frame.rooms.delete(0, END)
             self.master.info_frame.place_forget()
@@ -236,21 +316,28 @@ class MenuFrame(MyFrame):
     def __init__(self, *args, **kwargs):
         super(MenuFrame, self).__init__()
 
-        self.add_room = MyButton(self, text='Добавить комнату')
-        self.add_room.grid(row=0, column=0)
+        self.add_room = MyButton(self, text='добавить шлюз')
+        self.add_room.grid(row=3, column=0)
         self.add_room.bind('<Button-1>', self.show_addroom_frame)
 
-        self.delete_room = MyButton(self, text='Удалить комнату')
-        self.delete_room.grid(row=0, column=1)
+        self.delete_room = MyButton(self, text='удалить шлюз')
+        self.delete_room.grid(row=3, column=1)
         self.delete_room.bind('<Button-1>', self.show_delroom_frame)
 
+        self.change_status = MyButton(self, text='изменить пользователя')
+        self.change_status.grid(row=3, column=3)
+        self.change_status.bind('<Button-1>', self.show_changestatus_frame)
 
-        self.themes = MyButton(self, text='Темы')
-        self.themes.grid(row=0, column=2)
+        self.delete_user = MyButton(self, text='удалить пользователя')
+        self.delete_user.grid(row=3, column=4)
+        self.delete_user.bind('<Button-1>', self.show_deluser_frame)
+
+        self.themes = MyButton(self, text='темы')
+        self.themes.grid(row=3, column=5)
         self.themes.bind('<Button-1>', self.add_themes)
 
-        self.disconnect_from_the_server = MyButton(self, text='Выход из учетной записи')
-        self.disconnect_from_the_server.grid(row=0, column=3)
+        self.disconnect_from_the_server = MyButton(self, text='выход из учетной записи')
+        self.disconnect_from_the_server.grid(row=3, column=6)
         self.disconnect_from_the_server.bind('<Button-1>', self.disconnect)
 
 
@@ -260,12 +347,13 @@ class RoomsFrame(MyFrame):
         try:
             self.selected_room = self.rooms.get(self.rooms.curselection()[0])
             if self.selected_room:
-                self.master.send_message_frame.place(x=220, y=250)
+                self.master.send_message_frame.place(x=220, y=480)
                 self.master.bind('<Return>',
                                  self.master.send_message_frame.printer)
                 self.master.addroom_frame.place_forget()
                 self.master.delroom_frame.place_forget()
-             
+                self.master.changestatus_frame.place_forget()
+                self.master.deluser_frame.place_forget()
                 self.master.show_chat_frame()
                 self.master.themes_frame.place_forget()
         except IndexError:
@@ -276,10 +364,10 @@ class RoomsFrame(MyFrame):
 
         self.selected_room = None
 
-        self.label = MyLabel(self, text='Комнаты')
+        self.label = MyLabel(self, text='')
         self.label.pack(side=TOP)
 
-        self.rooms = MyListbox(self, height=15, width=24)
+        self.rooms = MyListbox(self, height=30, width=24)
         self.rooms.pack(side=LEFT)
         self.rooms.bind('<<ListboxSelect>>', self.select_room)
 
@@ -292,10 +380,10 @@ class ChatFrame(MyFrame):
     def __init__(self, *args, **kwargs):
         super(ChatFrame, self).__init__()
 
-        label = MyLabel(self, text='ЧАТ')
+        label = MyLabel(self, text='сообщения')
         label.pack(side=TOP)
 
-        self.messages = MyListbox(self, height=12, width=70)
+        self.messages = MyListbox(self, height=15, width=93)
         self.messages.pack(side=LEFT)
 
         self.scrollbar = MyScrollbar(self, command=self.messages.yview)
@@ -310,7 +398,7 @@ class InfoFrame(MyFrame):
         label = MyLabel(self, text='Общая информация')
         label.pack(side=TOP)
 
-        self.messages = MyListbox(self, height=5, width=73)
+        self.messages = MyListbox(self, height=5, width=93)
         self.messages.pack(side=LEFT)
 
         self.scrollbar = MyScrollbar(self, command=self.messages.yview)
@@ -331,7 +419,7 @@ class SendMessageFrame(MyFrame):
                              self.master.rooms_frame.selected_room, self.master)
                 self.entry.delete(0, END)
         else:
-            info(self.master.info_frame.messages, '# # # # # Длина сообщения 60 символов # # # # #')
+            info(self.master.info_frame.messages, 'Длина сообщения должна быть не более 60 символов')
 
     def __init__(self, *args, **kwargs):
         super(SendMessageFrame, self).__init__()
@@ -342,7 +430,7 @@ class SendMessageFrame(MyFrame):
         self.entry = MyEntry(self, width=70)
         self.entry.pack()
 
-        self.button_send_message = MyButton(self, text='отправьте сообщение')
+        self.button_send_message = MyButton(self, text='отправить сообщение')
         self.button_send_message.pack()
 
 
@@ -356,7 +444,7 @@ class SignupFrame(MyFrame):
 
         create_user(self, sock, server_addr)
 
-        if self.label_answer['text'] == 'успешно':
+        if self.label_answer['text'] == 'success':
             self.signin(self)
 
     def signin(self, event, *args, **kwargs):
@@ -368,7 +456,7 @@ class SignupFrame(MyFrame):
         self.entry_confirm_password.delete(0, END)
 
         self.place_forget()
-        self.master.signin_frame.place(x=320, y=250)
+        self.master.signin_frame.place(x=525, y=200)
         self.master.signin_frame.frame_bind(self.master.signin_frame)
 
     def __init__(self, *args, **kwargs):
@@ -394,7 +482,7 @@ class SignupFrame(MyFrame):
         self.entry_confirm_password = MyEntry(self, show='*')
         self.entry_confirm_password.pack()
 
-        self.button_signup = MyButton(self, text='зарегистрировать')
+        self.button_signup = MyButton(self, text='зарегистрироваться')
         self.button_signup.pack()
 
         label_or = MyLabel(self, text='или')
@@ -443,33 +531,33 @@ class SigninFrame(MyFrame):
         self.entry_password.delete(0, END)
 
         self.place_forget()
-        self.master.signup_frame.place(x=320, y=250)
+        self.master.signup_frame.place(x=525, y=200)
         self.master.signup_frame.frame_bind(self.master.signup_frame)
-	
+
     def __init__(self, *args, **kwargs):
         super(SigninFrame, self).__init__()
 
         self.rooms_listbox = args[0].rooms_frame.rooms
 
-        label_username = MyLabel(self, text='введите ваш логин:')
+        label_username = MyLabel(self, text='введите логин:')
         label_username.pack()
 
         self.entry_username = MyEntry(self)
         self.entry_username.pack()
 
-        label_password = MyLabel(self, text='введите ваш пароль:')
+        label_password = MyLabel(self, text='введите пароль:')
         label_password.pack()
 
         self.entry_password = MyEntry(self, show='*')
         self.entry_password.pack()
 
-        self.button_signin = MyButton(self, text='Войти в учетную запись')
+        self.button_signin = MyButton(self, text='войти')
         self.button_signin.pack()
 
         label_or = MyLabel(self, text='или')
         label_or.pack()
 
-        self.button_signup = MyButton(self, text='Создать учетную запись')
+        self.button_signup = MyButton(self, text='зарегистрироваться')
         self.button_signup.pack()
 
         self.label_answer = MyLabel(self, bg='black')
@@ -482,15 +570,15 @@ class SigninFrame(MyFrame):
 
 class MainWindow(MyTk):
     def show_frames(self):
-        self.rooms_frame.place(x=6, y=0)
-        self.info_frame.place(x=120, y=460)
+        self.rooms_frame.place(x=888, y=0)
+        self.info_frame.place(x=120, y=0)
         self.menu_frame.place(x=120, y=590)
 
     def show_chat_frame(self):
         for room in self.chat_frames:
             if room != self.rooms_frame.selected_room:
                 self.chat_frames[room].place_forget()
-        self.chat_frames[self.rooms_frame.selected_room].place(x=220, y=0)
+        self.chat_frames[self.rooms_frame.selected_room].place(x=120, y=150)
 
     def __init__(self):
         super(MainWindow, self).__init__()
@@ -501,7 +589,8 @@ class MainWindow(MyTk):
         self.addroom_frame = AddroomFrame(self)
 
         self.themes_frame = ThemesFrame(self)
-        
+        self.deluser_frame = DeluserFrame(self)
+        self.changestatus_frame = ChangestatusFrame(self)
         self.rooms_frame = RoomsFrame(self)
         self.chat_frames = dict()
         self.send_message_frame = SendMessageFrame(self)
@@ -509,11 +598,9 @@ class MainWindow(MyTk):
         self.signup_frame = SignupFrame(self)
 
         self.signin_frame = SigninFrame(self)
-        self.signin_frame.place(x=320, y=250)
+        self.signin_frame.place(x=525, y=200)
 
-	
-
-        self.minsize(width=810, height=650)
+        self.minsize(width=1200, height=650)
         self.title('SpaceChat')
         self.resizable(width=False, height=False)
         self.mainloop()

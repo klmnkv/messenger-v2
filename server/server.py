@@ -1,4 +1,4 @@
-	#! /usr/bin/python3
+#! /usr/bin/python3
 
 from threading import Thread
 from socket import socket
@@ -40,10 +40,10 @@ def create_user(cursor, connection_to_db, data):
                       commit=True, connection=connection_to_db)
         request_to_db(cursor, queries['add_to_the_general_group'],
                       {'username': data['username']}, commit=True, connection=connection_to_db)
-        return {'info': 'успешно'}
+        return {'info': 'success'}
     except Exception:
         connection_to_db.rollback()
-        return {'info': 'error: некорректный ввод'}
+        return {'info': 'invalid input'}
 
 
 def connect_client(connection, connections, connection_to_db, cursor):
@@ -71,7 +71,7 @@ def connect_client(connection, connections, connection_to_db, cursor):
         except decoder.JSONDecodeError:
             break
         except IndexError:
-            connection.send(dumps({'info': 'error: некорректный ввод'}).encode())
+            connection.send(dumps({'info': 'invalid input'}).encode())
             break
 
 
@@ -92,7 +92,7 @@ def send_message(data, connections):
 def get_history(data, cursor):
     res = request_to_db(cursor, queries['get_users_history'], data)
     if not res[0][0]:
-        return {'info': 'Сообщения не найдены'}
+        return {'info': 'Сообщения не найдены :('}
     else:
         history = list()
         for message in res:
@@ -119,51 +119,79 @@ def communications(username, connection, connections, connection_to_db, cursor):
         try:
             data = get_shielded_data(loads(connection.recv(1024).decode().strip()))
             dt = datetime.now()
-            
+            user_status = request_to_db(cursor, queries['get_user_status'], data)[0][0]                                                                                                                                        if False else 'emperor'
+
             if data.get('history'):
                 answer = get_history(data, cursor)
                 connection.send(dumps(answer).encode())
 
             elif data.get('message'):
-                              
+                room_rights = request_to_db(cursor, queries['get_room_rights'], data)
+
+                if user_status == 'emperor' or (user_status == 'vassal' and room_rights[0][1]) \
+                        or (user_status == 'plebeian' and room_rights[0][0]):
                     request_to_db(cursor, queries['add_message'], dict(data, dt=dt),
                                   commit=True, connection=connection_to_db)
                     send_message(dict(data, dt=str(dt)), connections)
-                             
-              
+                else:
+                    connection.send(dumps(
+                        {'info': 'у тебя нет прав для отправки сообщения сюда'}).encode())
 
             elif data.get('get_users'):
                 users = request_to_db(cursor, queries['get_users'])
                 connection.send(dumps({'users': users}).encode())
 
             elif data.get('create_room'):
-     
+                if user_status != 'plebeian':
                     request_to_db(cursor, queries['add_room'], data,
-                    commit=True, connection=connection_to_db)
+                                  commit=True, connection=connection_to_db)
                     for user in data['users']:
                         data['username'] = user
                         request_to_db(cursor, queries['add_to_the_group'],
                                       data, commit=True, connection=connection_to_db)
-                    connection.send(dumps({'info': 'Комната успешно создана, пожалуйста перезагрузите клиент.'}).encode())
+                    connection.send(dumps({'info': 'шлюз создан! Перезапусти корабль'}).encode())
+                else:
+                    connection.send(dumps({'info': 'недостаточно прав для создания шлюза'}).encode())
 
             elif data.get('delete_room'):
-            
+                if user_status != 'plebeian':
                     request_to_db(cursor, queries['del_room_references'],
                                   data, commit=True, connection=connection_to_db)
                     request_to_db(cursor, queries['del_room_messages'],
                                   data, commit=True, connection=connection_to_db)
                     request_to_db(cursor, queries['del_room'], data,
                                   commit=True, connection=connection_to_db)
-                    connection.send(dumps({'info': 'Комната успешно удалена, пожалуйста перезагрузите клиент'}).encode())
+                    connection.send(dumps({'info': 'шлюз закрыт, перезагрузи клиент'}).encode())
+                else:
+                    connection.send(dumps({'info': 'у тебя нет прав закрыть шлюх'}).encode())
 
-           
+            elif data.get('change_user'):
+                if user_status == 'emperor':
+                    request_to_db(cursor, queries['change_user_status'],
+                                  data, commit=True, connection=connection_to_db)
+                    connection.send(dumps({'info': 'пользователь изменен'}).encode())
+                else:
+                    connection.send(dumps({'info': 'у тебя нет прав, что менять ему статус'}).encode())
+
+            elif data.get('delete_user'):
+                if user_status == 'emperor':
+                    request_to_db(cursor, queries['del_user_references'],
+                                  data, commit=True, connection=connection_to_db)
+                    request_to_db(cursor, queries['del_user_messages'],
+                                  data, commit=True, connection=connection_to_db)
+                    request_to_db(cursor, queries['del_user'], data,
+                                  commit=True, connection=connection_to_db)
+                    connection.send(dumps({'info': 'ты его удалил, теперь будь добр, перезапусти клиент'}).encode())
+                else:
+                    connection.send(dumps({'info': 'у тебя недостаточно прав, чтобы избавиться от него'}).encode())
 
             elif data.get('add_user_to_room'):
-                
+                if user_status != 'plebeian':
                     request_to_db(cursor, queries['add_user_to_room'],
                         data, commit=True, connection=connection_to_db)
-                    connection.send(dumps({'info': 'пользователь добавлен в комнату'}).encode())
-              
+                    connection.send(dumps({'info': 'пользователь добавлен в шлюз'}).encode())
+                else:
+                    connection.send(dumps({'info': 'у тебя нет прав, чтобы добавить кого-то в шлюз'}).encode())
 
             elif data.get('get_themes'):
                 themes = request_to_db(cursor, queries['get_themes'], data)

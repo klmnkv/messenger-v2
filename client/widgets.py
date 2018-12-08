@@ -1,6 +1,7 @@
 from tkinter import Tk, Frame, Button, Label, Listbox, Scrollbar, Entry, Checkbutton, Radiobutton
 from config import main_color, sand_color, bd
 
+
 class MyTk(Tk):
     def change_theme(self, main_color, sand_color, bd, *args, **kwargs):
         self.configure(bg=main_color)

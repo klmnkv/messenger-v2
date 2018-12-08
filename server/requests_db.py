@@ -2,14 +2,17 @@ from psycopg2 import connect
 from config import database, db_user, db_password, db_host, db_port, server_addr
 
 
-queries = {
+queries = { 'change_user_status':
+                '''UPDATE users SET (status)=(
+                SELECT id_status FROM statuses WHERE status='{status}')
+                WHERE username='{modifiable_user}';''',
             'add_message': 
                 '''INSERT INTO messages (id_sender, id_room, dt, message)
                 VALUES ((SELECT id_user FROM users WHERE username='{username}'),
                 (SELECT id_room FROM rooms WHERE room_name='{room}'),
                 '{dt}', '{message}');''',
             'add_user':
-                '''INSERT INTO users (username, password, id_settings) 
+                '''INSERT INTO users (username, password, status, id_settings) 
                 VALUES ('{username}', '{password}', {mac}, 1);''',
             'add_user_to_room':
                 '''INSERT INTO users_rooms (id_room, id_user) VALUES 
@@ -24,8 +27,8 @@ queries = {
                 ((SELECT id_room FROM rooms WHERE room_name='{room_name}'),
                 (SELECT id_user FROM users WHERE username='{username}'));''',
             'add_room':
-                '''INSERT INTO rooms (room_name) VALUES 
-                ('{room_name}');''',
+                '''INSERT INTO rooms (room_name, room_type) VALUES 
+                ('{room_name}', {room_type});''',
             'del_user':
                 '''DELETE FROM users WHERE username='{del_username}';''',
             'del_user_messages':
@@ -50,7 +53,12 @@ queries = {
                 '''SELECT room_name FROM rooms WHERE id_room IN
                 (SELECT id_room FROM users_rooms WHERE id_user IN
                 (SELECT id_user FROM users WHERE username='{username}'));''',
-          
+            'get_user_status':
+                '''SELECT status FROM statuses WHERE 
+                id_status=(SELECT status FROM users WHERE username='{username}');''',
+            'get_room_rights':
+                '''SELECT plebeian_writing, vassal_writing FROM room_type
+                WHERE id_type=(SELECT room_type FROM rooms WHERE room_name='{room}');''',
             'get_users': 
                 '''SELECT username FROM users;''',
             'get_user': 
