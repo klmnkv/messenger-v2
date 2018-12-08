@@ -88,4 +88,6 @@ grant all privileges on database vscale_db to username;
 psql -h localhost vscale_db username
 После этого вы сможете взаимодействовать с вашей базой данных: создавать таблицы, созранять в них информцию, делать выборки и т.д.
 
-
+## Клиент запускается достаточно просто:
+------------------------------------- 
+python3 client.py либо ./client.py
